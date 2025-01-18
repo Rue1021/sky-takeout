@@ -95,6 +95,7 @@ public class EmployeeServiceImpl implements EmployeeService { //在实现类的�
         employee.setUpdateUser(BaseContext.getCurrentId());
 
         employeeMapper.insert(employee);
+        //TODO 这个remove 其他方法也可能用到ThreadLocal 所以应该放在哪里？？
         BaseContext.removeCurrentId();
 
     }
@@ -131,5 +132,38 @@ public class EmployeeServiceImpl implements EmployeeService { //在实现类的�
                 .build();
         employeeMapper.update(employee);
     }
+
+    /**
+     * 根据id查询员工信息
+     * @param id
+     * @return
+     */
+    @Override
+    public Employee getById(Long id) {
+        Employee employee = employeeMapper.getById(id);
+        employee.setPassword("****");
+        return employee;
+    }
+
+    /**
+     * 编辑员工信息
+     * @param employeeDTO
+     */
+    @Override
+    public void update(EmployeeDTO employeeDTO) {
+        //Mapper里已经编辑好的update需要对象类型为Employee，这里要通过属性拷贝把DTO对象转换为Employee对象
+        Employee employee = new Employee();
+        BeanUtils.copyProperties(employeeDTO, employee);
+
+        //手动写一下DTO对象里没有的属性
+        employee.setUpdateTime(LocalDateTime.now());
+        employee.setUpdateUser(BaseContext.getCurrentId());
+
+        employeeMapper.update(employee);
+
+        BaseContext.removeCurrentId();
+
+    }
+
 
 }
