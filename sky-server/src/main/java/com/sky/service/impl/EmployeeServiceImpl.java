@@ -85,18 +85,18 @@ public class EmployeeServiceImpl implements EmployeeService { //在实现类的�
         employee.setPassword(DigestUtils.md5DigestAsHex(PasswordConstant.DEFAULT_PASSWORD.getBytes()));
 
         //设置当前记录的创建时间和修改时间
-        employee.setCreateTime(LocalDateTime.now());
-        employee.setUpdateTime(LocalDateTime.now());
+        //employee.setCreateTime(LocalDateTime.now());
+        //employee.setUpdateTime(LocalDateTime.now());
 
         //设置当前记录创建人id和修改人id
         //使用ThreadLocal 的封装类来实现
 
-        employee.setCreateUser(BaseContext.getCurrentId());
-        employee.setUpdateUser(BaseContext.getCurrentId());
+        //employee.setCreateUser(BaseContext.getCurrentId());
+        //employee.setUpdateUser(BaseContext.getCurrentId());
 
         employeeMapper.insert(employee);
-        //TODO 这个remove 其他方法也可能用到ThreadLocal 所以应该放在哪里？？
-        BaseContext.removeCurrentId();
+        // 这个remove 其他方法也可能用到ThreadLocal 所以应该放在哪里？？
+        //BaseContext.removeCurrentId();
 
     }
 
@@ -156,12 +156,11 @@ public class EmployeeServiceImpl implements EmployeeService { //在实现类的�
         BeanUtils.copyProperties(employeeDTO, employee);
 
         //手动写一下DTO对象里没有的属性
-        employee.setUpdateTime(LocalDateTime.now());
-        employee.setUpdateUser(BaseContext.getCurrentId());
+        //employee.setUpdateTime(LocalDateTime.now());
+        //employee.setUpdateUser(BaseContext.getCurrentId());
 
         employeeMapper.update(employee);
 
-        BaseContext.removeCurrentId();
 
     }
 
