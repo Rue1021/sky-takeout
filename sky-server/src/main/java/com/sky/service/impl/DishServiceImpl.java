@@ -85,6 +85,7 @@ public class DishServiceImpl implements DishService {
      */
     @Override
     @Transactional
+    //TODO 加了事务注解，依旧不能批量删除选中的套餐
     public void deleteBatch(List<Long> ids) {
         //判断当前菜品是否能被删除1 --是否存在起售中的菜品
         for (Long id : ids) {
@@ -183,10 +184,23 @@ public class DishServiceImpl implements DishService {
         }
     }
 
+    /**
+     * 根据分类id查询菜品
+     * @param categoryId
+     * @return
+     */
     @Override
-    public List<Dish> getDishByCategoryId(Long categoryId) {
-        List<Dish> dishes = dishMapper.getDishByCategoryId(categoryId);
-        return dishes;
+    public List<Dish> list(Long categoryId) {
+        //自己写的
+//        List<Dish> dishes = dishMapper.getDishByCategoryId(categoryId);
+//        return dishes;
+        //参考答案
+        //用builder构建对象，传入categoryId，以及限定菜品状态为启售
+        Dish dish = Dish.builder()
+                .categoryId(categoryId)
+                .status(StatusConstant.ENABLE)
+                .build();
+        return  dishMapper.list(dish);
     }
 
 
