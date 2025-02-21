@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController("userOrderController")
 @RequestMapping("/user/order")
 @Api(tags = "C端用户端订单相关接口")
@@ -103,4 +106,18 @@ public class OrderController {
         orderService.orderAgain(id);
         return Result.success();
     }
+
+    /**
+     * 用户催单
+     * @param id
+     * @return
+     */
+    @GetMapping("/reminder/{id}")
+    @ApiOperation("催单")
+    public Result remind(@PathVariable Long id) {
+        log.info("催单，目标id：{}", id);
+        orderService.remind(id);
+        return Result.success();
+    }
+
 }
