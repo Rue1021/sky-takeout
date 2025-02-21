@@ -79,4 +79,19 @@ public interface OrderMapper {
      */
     @Select(("select count(id) from orders where status = #{status}"))
     Integer countStatus(Integer status);
+
+    /**
+     * 查询是否有超时未支付订单/是否有一直处于派送中的订
+     * @return
+     */
+    @Select("select * from orders where status = #{status} and order_time < #{orderTime}")
+    List<Orders> getByStatusAndOrderTimeLessThan(Integer status, LocalDateTime orderTime);
+
+    /**
+     * 根据订单号查找订单
+     * @param orderNumber
+     * @return
+     */
+    @Select("select * from orders where number = #{orderNumber}")
+    Orders getByOrderNumber(String orderNumber);
 }
