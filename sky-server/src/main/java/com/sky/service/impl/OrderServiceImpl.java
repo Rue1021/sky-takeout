@@ -5,9 +5,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
-import com.sky.dto.OrdersPageQueryDTO;
-import com.sky.dto.OrdersPaymentDTO;
-import com.sky.dto.OrdersSubmitDTO;
+import com.sky.dto.*;
 import com.sky.entity.*;
 import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
@@ -18,6 +16,7 @@ import com.sky.result.Result;
 import com.sky.service.OrderService;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
+import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 import io.swagger.annotations.ApiOperation;
@@ -26,12 +25,15 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -308,5 +310,276 @@ public class OrderServiceImpl implements OrderService {
         shoppingCartMapper.insertBatch(shoppingCartList);
     }
 
+    /**
+     * 订单搜索
+     * @param ordersPageQueryDTO
+     * @return
+     */
+    @Override
+    public PageResult orderConditionSearch(OrdersPageQueryDTO ordersPageQueryDTO) {
+        //分页
+        PageHelper.startPage(ordersPageQueryDTO.getPage(),ordersPageQueryDTO.getPageSize());
 
+//        //拿到所有订单
+//        List<Orders> list =  orderMapper.pageQuery(ordersPageQueryDTO);
+//        if(list == null) {
+//            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+//        }
+//        Page<OrderVO> orderVOList = new Page<>();
+//        for (Orders orders : list) {
+//            //把订单信息拷贝到OrderVO对象
+//            OrderVO orderVO = new OrderVO();
+//            BeanUtils.copyProperties(orders, orderVO);
+//            //查询并将订单明细set到OrderVO对象
+//            List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orders.getId());
+//            orderVO.setOrderDetailList(orderDetailList);
+//            orderVOList.add(orderVO);
+//        }
+//        return new PageResult(orderVOList.getTotal(), orderVOList);
+
+        //参考答案
+        Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
+
+        //部分订单状态，需要额外返回订单菜品信息，将Orders转化为OrderVO
+        List<OrderVO> orderVOList = getOrderVOList(page);
+
+        return new PageResult(page.getTotal(), orderVOList);
+    }
+    //参考答案，为条件查询写的私有方法，将Orders转化为OrderVO，以OrderVO形式返回订单菜品信息
+    private List<OrderVO> getOrderVOList(Page<Orders> page) {
+        List<OrderVO> orderVOList = new ArrayList<>();
+
+        List<Orders> ordersList = page.getResult();
+
+        if(!(CollectionUtils.isEmpty(ordersList))) {
+            for (Orders orders : ordersList) {
+                //如果查询出来的order list不为空，就将共同字段复制到OrderVO
+                OrderVO orderVO = new OrderVO();
+                BeanUtils.copyProperties(orders, orderVO);
+                String orderDishes = getOrderDishesStr(orders);
+
+                //将订单菜品信息封装到orderVO,并添加到要返回的list集合
+                orderVO.setOrderDishes(orderDishes);
+                orderVOList.add(orderVO);
+            }
+        }
+        return orderVOList;
+    }
+
+    /**
+     * 私有方法，根据订单id获取菜品信息字符串
+     * @param orders
+     * @return
+     */
+    private String getOrderDishesStr(Orders orders) {
+        //先在OrderDetail数据库查到该订单对应的菜品名字和数量
+        List<OrderDetail> list = orderDetailMapper.getByOrderId(orders.getId());
+//        String orderDishes = "";
+//        String orderDishes1 = "";
+//        if (list != null && list.size() > 0) {
+//
+//            for (OrderDetail orderDetail : list) {
+//                String name = orderDetail.getName();
+//                int number = orderDetail.getNumber();
+//                orderDishes1 = name + "*" + number + ";";
+//                orderDishes += orderDishes1;
+//            }
+//
+//        }
+//        return orderDishes;
+
+        //参考答案
+        //将每一条订单菜品信息拼接为字符串
+        List<String> orderDishesList = list.stream().map(x -> {
+            String orderDish = x.getName() + "*" + x.getNumber() + ";";
+            return orderDish;
+        }).collect(Collectors.toList());
+
+        //将该订单所有菜品信息拼接在一起
+        return String.join("", orderDishesList);
+    }
+
+
+    /**
+     * 各个状态的订单数量统计
+     * @return
+     */
+    @Override
+    public OrderStatisticsVO statusStatistics() {
+//        //查找数据库，获得全部订单
+//        List<Orders> list = orderMapper.get();
+//        //查找数据库，获得全部订单的状态
+//        List<Integer> statusList = orderMapper.getStatus();
+//        Integer toBeConfirmedNumber = 0;
+//        Integer confirmedNumber = 0;
+//        Integer deliveryInProgressNumber = 0;
+//        //遍历订单状态的集合，统计各个状态的订单数量并返回
+//        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+//        for (Integer i : statusList) {
+//            if (i == Orders.TO_BE_CONFIRMED) {
+//                toBeConfirmedNumber++;
+//            }
+//            if (i == Orders.CONFIRMED) {
+//                confirmedNumber++;
+//            }
+//            if (i == Orders.DELIVERY_IN_PROGRESS) {
+//                deliveryInProgressNumber++;
+//            }
+//        }
+        //参考答案
+        //根据状态，分别查询出待接单、待派送、派送中的订单数量
+        Integer toBeConfirmedNumber = orderMapper.countStatus(Orders.TO_BE_CONFIRMED);
+        Integer confirmedNumber = orderMapper.countStatus(Orders.CONFIRMED);
+        Integer deliveryInProgressNumber = orderMapper.countStatus(Orders.DELIVERY_IN_PROGRESS);
+
+        //将统计结果封装进VO对象返回
+        OrderStatisticsVO orderStatisticsVO = new OrderStatisticsVO();
+        orderStatisticsVO.setToBeConfirmed(toBeConfirmedNumber);
+        orderStatisticsVO.setConfirmed(confirmedNumber);
+        orderStatisticsVO.setDeliveryInProgress(deliveryInProgressNumber);
+        return orderStatisticsVO;
+    }
+
+    /**
+     * 管理端查询订单详情
+     * @param id
+     * @return
+     */
+    @Override
+    public OrderVO details(Long id) {
+        Orders orders = orderMapper.getByOrderId(id);
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(orders, orderVO);
+        orderVO.setOrderDetailList(orderDetailList);
+        return orderVO;
+    }
+
+    /**
+     * 接单
+     * @param ordersConfirmDTO
+     */
+    @Override
+    public void orderConfirm(OrdersConfirmDTO ordersConfirmDTO) {
+        //从数据库查到该笔订单，将订单状态改为已接单
+        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+//        Orders orders = orderMapper.getByOrderId(ordersConfirmDTO.getId());
+//
+//        if (ordersConfirmDTO.getStatus() != Orders.TO_BE_CONFIRMED) {
+//            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+//        }
+//
+//        orders.setStatus(Orders.CONFIRMED);
+        Orders orders = Orders.builder()
+                .id(ordersConfirmDTO.getId())
+                        .status(Orders.CONFIRMED)
+                                .build();
+        //更新数据库订单状态
+        orderMapper.update(orders);
+    }
+
+    /**
+     * 拒单
+     * @param ordersRejectionDTO
+     */
+    @Override
+    public void orderRejection(OrdersRejectionDTO ordersRejectionDTO) {
+        //从数据库查到该笔订单，将订单状态改为已取消
+        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+        Orders orders = orderMapper.getByOrderId(ordersRejectionDTO.getId());
+
+        //订单必须存在且状态为待接单，才可以拒单
+        if (orders == null || !(orders.getStatus().equals(Orders.TO_BE_CONFIRMED))) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        //拒单+退款
+        orders.setStatus(Orders.CANCELLED);
+        orders.setPayStatus(Orders.REFUND);
+
+        //更新拒单原因
+        orders.setRejectionReason(ordersRejectionDTO.getRejectionReason());
+        //更新取消时间
+        orders.setCancelTime(LocalDateTime.now());
+
+        //更新数据库订单状态
+        orderMapper.update(orders);
+    }
+
+    /**
+     * 取消订单
+     * @param ordersCancelDTO
+     */
+    @Override
+    public void cancel(OrdersCancelDTO ordersCancelDTO) {
+        //从数据库查到该笔订单，将订单状态改为已取消
+        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+        Orders ordersDB = orderMapper.getByOrderId(ordersCancelDTO.getId());
+
+        Orders orders = new Orders();
+        if (ordersDB.getPayStatus().equals(Orders.PAID)) {
+            orders.setPayStatus(Orders.REFUND);
+        }
+        orders.setId(ordersCancelDTO.getId());
+        orders.setStatus(Orders.CANCELLED);
+
+        //更新订单取消原因
+        orders.setRejectionReason(ordersCancelDTO.getCancelReason());
+        orders.setCancelTime(LocalDateTime.now());
+
+        //更新数据库订单状态
+        orderMapper.update(orders);
+    }
+
+    /**
+     * 订单派送
+     * @param id
+     */
+    @Override
+    public void orderDelivery(Long id) {
+        //从数据库查到该订单
+        Orders ordersDB = orderMapper.getByOrderId(id);
+
+        //只有状态为待派送的订单可以执行派送订单操作
+        if (ordersDB == null || !(ordersDB.getStatus().equals(Orders.CONFIRMED))) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        Orders orders = Orders.builder()
+                .id(id)
+                .status(Orders.DELIVERY_IN_PROGRESS)
+                .build();
+        //设置订单状态
+
+
+        //更新数据库订单状态
+        orderMapper.update(orders);
+    }
+
+    /**
+     * 完成订单
+     * @param id
+     */
+    @Override
+    public void complete(Long id) {
+        //从数据库查到该订单
+        Orders ordersDB = orderMapper.getByOrderId(id);
+
+        //只有状态为待派送的订单可以执行派送订单操作
+        if (ordersDB == null || !(ordersDB.getStatus().equals(Orders.DELIVERY_IN_PROGRESS))) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        //完成订单需要更新送达时间
+        Orders orders = Orders.builder()
+                .id(ordersDB.getId())
+                .status(Orders.COMPLETED)
+                .deliveryTime(LocalDateTime.now())
+                .build();
+
+
+        //更新数据库订单状态
+        orderMapper.update(orders);
+    }
 }
