@@ -18,8 +18,6 @@
         where id = #{id}
     </update>
 
-
-
     <delete id="deleteBySetmealIds">
         delete from setmeal where id in
             <foreach collection="ids" separator="," item="setmealId" open="(" close=")">
@@ -62,4 +60,17 @@
             values
             (#{categoryId}, #{name}, #{price}, #{description}, #{image}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser}, #{status})
     </insert>
+
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(id) from setmeal
+        <where>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
 </mapper>
