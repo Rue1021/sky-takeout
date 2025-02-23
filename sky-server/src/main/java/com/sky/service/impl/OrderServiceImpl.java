@@ -169,6 +169,14 @@ public class OrderServiceImpl implements OrderService {
 
         Orders orders = orderMapper.getByOrderNumber(orderNumber);
 
+        //用户支付成功后，通过websocket向客户端浏览器推送消息 type orderId content
+        /*
+        实现思路：
+        1. 通过websocket实现管理端页面和服务器保持长连接状态
+        2. 客户支付以后，调用wensocket相关api实现服务端向客户端推送消息
+        3. 客户端浏览器解析服务端推送的消息，判断是来单提醒还是客户催单，进行相应的消息提示和语音播报
+         */
+        //type 1 来单提醒 2 客户催单
         Map map = new HashMap();
         map.put("type", 1);
         map.put("orderId", orders.getId());
@@ -200,15 +208,9 @@ public class OrderServiceImpl implements OrderService {
 
         orderMapper.update(orders);
 
-        //用户支付成功后，通过websocket向客户端浏览器推送消息 type orderId content
-        /*
-        实现思路：
-        1. 通过websocket实现管理端页面和服务器保持长连接状态
-        2. 客户支付以后，调用wensocket相关api实现服务端向客户端推送消息
-        3. 客户端浏览器解析服务端推送的消息，判断是来单提醒还是客户催单，进行相应的消息提示和语音播报
-         */
-        //type 1 来单提醒 2 客户催单
-        //TODO 该方法写在这里没有用，写在上面的payment，管理端浏览器才有语音和弹窗播报
+
+        //该方法写在这里没有用，写在上面的payment，管理端浏览器才有语音和弹窗播报
+        //找到原因了：这段代码所在方法paySuccess只被weChatPayUtil调用了，跳过微信支付时并没用到weChatPayUtil，所以这个方法没有被调用
         Map map = new HashMap();
         map.put("type", 1);
         map.put("orderId", ordersDB.getId());
