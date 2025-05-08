@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController("adminShopController")
 @Slf4j
 @RequestMapping("/admin/shop")
-@Api(tags = "店铺相关接口")
+@Api(tags = "商家端店铺相关接口")
 public class ShopController {
 
     public static final String KEY = "SHOP_STATUS";
@@ -28,7 +28,7 @@ public class ShopController {
     @PutMapping("/{status}")
     @ApiOperation("店铺营业状态设置")
     public Result setStatus(@PathVariable Integer status) {
-        log.info("店铺营业状态状态为：{}", status == StatusConstant.ENABLE ? "营业中" : "打烊中");
+        log.info("设置店铺营业状态状态为：{}", status == StatusConstant.ENABLE ? "营业中" : "打烊中");
         redisTemplate.opsForValue().set(KEY, status);
         return Result.success();
     }

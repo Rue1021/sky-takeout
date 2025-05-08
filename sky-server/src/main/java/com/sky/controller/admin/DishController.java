@@ -43,7 +43,7 @@ public class DishController {
 
         dishService.saveWithFlavor(dishDTO);
 
-        //精确清理
+        //清理缓存
         String key = "dish_" + dishDTO.getCategoryId();
         cleanCache(key);
 
@@ -72,6 +72,7 @@ public class DishController {
     @ApiOperation("批量删除菜品")
     public Result delete(@RequestParam List<Long> ids) {
         log.info("批量删除菜品：{}", ids);
+
         dishService.deleteBatch(ids);
 
         //将所有的菜品缓存数据清理掉，所有以dish开头的key
@@ -81,7 +82,7 @@ public class DishController {
     }
 
     /**
-     * 根据id查询菜品
+     * 根据菜品id查询菜品
      * @param id
      * @return
      */
@@ -89,6 +90,7 @@ public class DishController {
     @ApiOperation("根据id查询菜品")
     public Result<DishVO> getById(@PathVariable Long id) {
         log.info("根据id查询菜品：{}", id);
+
         DishVO dishVO = dishService.getByIdWithFlavor(id);
         return Result.success(dishVO);
     }
@@ -102,7 +104,9 @@ public class DishController {
     @ApiOperation("根据分类id查询菜品")
     public Result<List<Dish>> list(Long categoryId) {
         log.info("根据分类id查询菜品：{}", categoryId);
+
         List<Dish> list = dishService.list(categoryId);
+
         return Result.success(list);
     }
 
@@ -115,6 +119,7 @@ public class DishController {
     @ApiOperation("修改菜品信息")
     public Result update(@RequestBody DishDTO dishDTO) {
         log.info("修改菜品信息：{}", dishDTO);
+
         dishService.updateWithFlavor(dishDTO);
 
         cleanCache("dish_*");
@@ -132,6 +137,7 @@ public class DishController {
     @ApiOperation("菜品起售停售")
     public Result<String> startOrStop(@PathVariable Integer status, Long id) {
         log.info("菜品起售停售：{},{}", status, id);
+
         dishService.startOrStop(status, id);
 
         cleanCache("dish_*");

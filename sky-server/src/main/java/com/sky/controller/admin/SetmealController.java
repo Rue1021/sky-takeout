@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import static org.springframework.jdbc.core.JdbcOperationsExtensionsKt.query;
 
 /**
  * 套餐管理
@@ -30,7 +29,6 @@ public class SetmealController {
 
     @Autowired
     private SetmealService setmealService;
-
 
     /**
      * 新增套餐
@@ -74,7 +72,7 @@ public class SetmealController {
     }
 
     /**
-     * 根据套餐id查询套餐，用于修改页面回显数据
+     * 根据套餐id查询套餐，用于页面回显
      * @param id
      * @return
      */
@@ -111,6 +109,7 @@ public class SetmealController {
     @CacheEvict(cacheNames = "setmealCache", allEntries = true)
     public Result startOrStop(@PathVariable Integer status, Long id) {
         log.info("根据id起售和停售套餐：{}, {}", id, status);
+
         setmealService.startOrStop(id, status);
         return Result.success();
     }

@@ -34,13 +34,13 @@ public interface AddressBookMapper {
     AddressBook getById(Long id);
 
     /**
-     * 根据id修改
+     * 根据id修改地址信息
      * @param addressBook
      */
     void update(AddressBook addressBook);
 
     /**
-     * 根据 用户id修改 是否默认地址
+     * 将用户所有地址设为非默认
      * @param addressBook
      */
     @Update("update address_book set is_default = #{isDefault} where user_id = #{userId}")

@@ -40,19 +40,17 @@
         </where>
         order by s.create_time desc
     </select>
+
+
     <select id="list" resultType="com.sky.entity.Setmeal" parameterType="Setmeal">
         select * from setmeal
-        <where>
-            <if test="name != null">
-                and name like concat('%',#{name},'%')
-            </if>
-            <if test="categoryId != null">
-                and category_id = #{categoryId}
-            </if>
-            <if test="status != null">
-                and status = #{status}
-            </if>
-        </where>
+        where status = 1
+        <if test="name != null">
+            and name like concat('%',#{name},'%')
+        </if>
+        <if test="categoryId != null">
+            and category_id = #{categoryId}
+        </if>
     </select>
 
     <insert id="insert" parameterType="Setmeal" useGeneratedKeys="true" keyProperty="id">

@@ -32,7 +32,7 @@ public interface DishFlavorMapper {
     List<DishFlavor> getByDishId(Long dishId);
 
     /**
-     * 优化根据菜品id集合批量删除菜品
+     * 根据菜品ids批量删除菜品及其口味
      * @param dishIds
      */
     void deleteByDishIds(List<Long> dishIds);

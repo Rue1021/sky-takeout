@@ -16,7 +16,6 @@ public interface ShoppingCartMapper {
      * @param shoppingCart
      * @return
      */
-    //动态查询，可能返回多个数据，所以选择List来接收
     List<ShoppingCart> list(ShoppingCart shoppingCart);
 
     @Update("update shopping_cart set number = #{number} where id = #{id}")

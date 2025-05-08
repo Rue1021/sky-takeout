@@ -51,14 +51,14 @@ public interface SetmealService {
     void startOrStop(Long id, Integer status);
 
     /**
-     * 条件查询
+     * 用户根据分类id查询套餐
      * @param setmeal
      * @return
      */
     List<Setmeal> list(Setmeal setmeal);
 
     /**
-     * 根据id查询菜品选项
+     * 用户根据套餐id查询套内菜品
      * @param id
      * @return
      */

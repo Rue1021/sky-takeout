@@ -62,9 +62,12 @@ public class CategoryServiceImpl implements CategoryService {
      * @return
      */
     public PageResult pageQuery(CategoryPageQueryDTO categoryPageQueryDTO) {
-        PageHelper.startPage(categoryPageQueryDTO.getPage(),categoryPageQueryDTO.getPageSize());
-        //下一条sql进行分页，自动加入limit关键字分页
+
+        PageHelper.startPage(categoryPageQueryDTO.getPage(),
+                categoryPageQueryDTO.getPageSize());
+
         Page<Category> page = categoryMapper.pageQuery(categoryPageQueryDTO);
+
         return new PageResult(page.getTotal(), page.getResult());
     }
 
@@ -73,21 +76,21 @@ public class CategoryServiceImpl implements CategoryService {
      * @param id
      */
     public void deleteById(Long id) {
-        //查询当前分类是否关联了菜品，如果关联了就抛出业务异常
+        //查询当前分类是否关联了菜品
         Integer count = dishMapper.countByCategoryId(id);
         if(count > 0){
             //当前分类下有菜品，不能删除
             throw new DeletionNotAllowedException(MessageConstant.CATEGORY_BE_RELATED_BY_DISH);
         }
 
-        //查询当前分类是否关联了套餐，如果关联了就抛出业务异常
+        //查询当前分类是否关联了套餐
         count = setmealMapper.countByCategoryId(id);
         if(count > 0){
-            //当前分类下有菜品，不能删除
+            //当前分类下有套餐，不能删除
             throw new DeletionNotAllowedException(MessageConstant.CATEGORY_BE_RELATED_BY_SETMEAL);
         }
 
-        //删除分类数据
+        //根据id删除分类
         categoryMapper.deleteById(id);
     }
 
@@ -96,6 +99,7 @@ public class CategoryServiceImpl implements CategoryService {
      * @param categoryDTO
      */
     public void update(CategoryDTO categoryDTO) {
+
         Category category = new Category();
         BeanUtils.copyProperties(categoryDTO,category);
 
@@ -127,6 +131,7 @@ public class CategoryServiceImpl implements CategoryService {
      * @return
      */
     public List<Category> list(Integer type) {
+
         return categoryMapper.list(type);
     }
 }

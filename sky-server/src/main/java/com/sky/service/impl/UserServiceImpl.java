@@ -32,7 +32,7 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
 
     /**
-     * 微信登录
+     * 用户微信登录
      * @param userLoginDTO
      * @return
      */
@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
         //调用微信接口服务，获得当前微信用户的openid
         String openid = getOpenid(userLoginDTO.getCode());
 
-        //判断openid是否为空，如果为空则表示登录失败，抛出业务异常
+
         if(openid == null) {
             throw new LoginFailedException(MessageConstant.LOGIN_FAILED);
         }

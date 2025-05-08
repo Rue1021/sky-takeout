@@ -35,8 +35,10 @@ public class PayNotifyController {
      * @param request
      */
     @RequestMapping("/paySuccess")
-    public void paySuccessNotify(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        //读取数据
+    public void paySuccessNotify(HttpServletRequest request,
+                                 HttpServletResponse response)
+            throws Exception {
+
         String body = readData(request);
         log.info("支付成功回调：{}", body);
 

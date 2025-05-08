@@ -96,8 +96,12 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
      */
     protected void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("设置静态资源映射");
-        registry.addResourceHandler("/doc.html").addResourceLocations("classpath:/META-INF/resources/");
-        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+        registry
+                .addResourceHandler("/doc.html")
+                .addResourceLocations("classpath:/META-INF/resources/");
+        registry
+                .addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 
 
@@ -112,7 +116,7 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         //创建一个消息转换器对象
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
 
-        //需要给消息转换器设置一个对象转换器，对象转换器可以将java对象序列化为json数据
+        //需要给消息转换器设置一个对象转换器，对象转换器可以将java对象序列化为json
         converter.setObjectMapper(new JacksonObjectMapper());
 
         //将自己的消息转换器加入容器中

@@ -36,7 +36,7 @@ public interface OrderMapper {
     void update(Orders orders);
 
     /**
-     * 用于替换微信支付 更新数据库状态
+     * 替换微信支付 更新数据库状态
      * @param orderStatus
      * @param orderPaidStatus
      * @param checkOutTime
@@ -98,18 +98,20 @@ public interface OrderMapper {
     Orders getByOrderNumber(String orderNumber);
 
     /**
-     * 根据动态条件统计营业额数据
+     * 根据动态条件统计订单量
+     * @param map
+     * @return
+     */
+    Integer countOrderByMap(Map map);
+
+    /**
+     * 根据动态条件统计营业额
      * @param map
      * @return
      */
     Double sumByMap(Map map);
 
-    /**
-     * 根据动态条件统计订单
-     * @param map
-     * @return
-     */
-    Integer countOrderByMap(Map map);
+
 
     List<GoodsSalesDTO> topSales(LocalDateTime beginTime, LocalDateTime endTime);
 }

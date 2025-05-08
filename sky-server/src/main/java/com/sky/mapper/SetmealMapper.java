@@ -48,13 +48,6 @@ public interface SetmealMapper {
      */
     Page<SetmealVO> pageQuery(SetmealPageQueryDTO setmealPageQueryDTO);
 
-    /**
-     * 根据套餐id查询套餐
-     * @param id
-     * @return
-     */
-    @Select("select * from setmeal where id = #{id}")
-    SetmealVO getBySetmealId(Long id);
 
     /**
      * 根据套餐id批量删除套餐
@@ -93,6 +86,7 @@ public interface SetmealMapper {
     @Select("select sd.name,sd.copies,d.image,d.description " +
             "from setmeal_dish sd left join dish d on sd.dish_id = d.id " +
             "where sd.setmeal_id = #{setmealId}")
+    //这里形参传过来的id是套餐id
     List<DishItemVO> getDishItemBySetmealId(Long id);
 
     /**

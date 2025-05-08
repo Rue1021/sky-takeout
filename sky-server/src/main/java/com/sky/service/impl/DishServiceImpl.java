@@ -85,16 +85,15 @@ public class DishServiceImpl implements DishService {
      */
     @Override
     @Transactional
-    //TODO 加了事务注解，依旧不能批量删除选中的套餐
     public void deleteBatch(List<Long> ids) {
-        //判断当前菜品是否能被删除1 --是否存在起售中的菜品
+        //是否存在起售中的菜品
         for (Long id : ids) {
             Dish dish = dishMapper.getById(id);
             if(dish.getStatus() == StatusConstant.ENABLE) {
                 throw new DeletionNotAllowedException(MessageConstant.DISH_ON_SALE);
             }
         }
-        //判断当前菜品是否能被删除2 --菜品是否被套餐关联
+        //菜品是否被套餐关联
         List<Long> setmealIds = setmealDishMapper.getSetmealIdsByDishIds(ids);
         if(setmealIds != null && setmealIds.size() > 0) {
             throw new DeletionNotAllowedException(MessageConstant.DISH_BE_RELATED_BY_SETMEAL);
@@ -119,19 +118,24 @@ public class DishServiceImpl implements DishService {
      */
     @Override
     public DishVO getByIdWithFlavor(Long id) {
+
         //根据id查询菜品
         Dish dish = dishMapper.getById(id);
+
         //根据id查询菜品对应口味
         List<DishFlavor> dishFlavors = dishFlavorMapper.getByDishId(id);
-        //把菜品和口味封装成一个VO对象
+
+        //把菜品和口味封装成VO对象
         DishVO dishVO = new DishVO();
+
         BeanUtils.copyProperties(dish,dishVO);
         dishVO.setFlavors(dishFlavors);
+
         return dishVO;
     }
 
     /**
-     * 修改菜品信息
+     * 商家端修改菜品信息
      * @param dishDTO
      */
     @Override
@@ -142,18 +146,20 @@ public class DishServiceImpl implements DishService {
 
         //修改菜品基本属性
         dishMapper.update(dish);
+
         //删除原来的口味信息
         dishFlavorMapper.deleteByDishId(dishDTO.getId());
+
         //重新插入口味数据
         List<DishFlavor> flavors = dishDTO.getFlavors();
         if(flavors.size() > 0 && flavors != null) {
+            //给口味数据的dish_id字段赋值
             flavors.forEach(dishFlavor -> {
                 dishFlavor.setDishId(dishDTO.getId());
             });
             //向口味表插入n条数据
             dishFlavorMapper.insertBatch(flavors);
         }
-
     }
 
     /**
@@ -164,6 +170,7 @@ public class DishServiceImpl implements DishService {
     @Override
     @Transactional
     public void startOrStop(Integer status, Long id) {
+
         Dish dish = Dish.builder()
                 .status(status)
                 .id(id)
@@ -173,6 +180,7 @@ public class DishServiceImpl implements DishService {
         List<Long> dishIds = new ArrayList<>();
         dishIds.add(id);
         List<Long> setmealIds = setmealDishMapper.getSetmealIdsByDishIds(dishIds);
+
         if (setmealIds != null && setmealIds.size() > 0 ) {
             for (Long setmealId : setmealIds) {
                 Setmeal setmeal = Setmeal.builder()
@@ -191,15 +199,14 @@ public class DishServiceImpl implements DishService {
      */
     @Override
     public List<Dish> list(Long categoryId) {
-        //自己写的
-//        List<Dish> dishes = dishMapper.getDishByCategoryId(categoryId);
-//        return dishes;
-        //参考答案
+
         //用builder构建对象，传入categoryId，以及限定菜品状态为启售
         Dish dish = Dish.builder()
                 .categoryId(categoryId)
                 .status(StatusConstant.ENABLE)
                 .build();
+
+        //动态条件查询菜品
         return  dishMapper.list(dish);
     }
 
@@ -210,6 +217,7 @@ public class DishServiceImpl implements DishService {
      */
     @Override
     public List<DishVO> listWithFlavor(Dish dish) {
+
         List<Dish> dishList = dishMapper.list(dish);
 
         List<DishVO> dishVOList = new ArrayList<>();

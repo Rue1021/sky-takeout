@@ -64,26 +64,24 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO) {
 
-        //1. 处理各种业务异常 --购物车为空、地址簿为空
+        //购物车为空、地址簿为空
         AddressBook addressBook = addressBookMapper.getById(ordersSubmitDTO.getAddressBookId());
         if (addressBook == null) {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
 
         Long userId = addressBook.getUserId();
-        // Long userId = BaseContext.getCurrentId();
 
         ShoppingCart shoppingCart = ShoppingCart.builder()
                 .userId(userId)
                 .build();
-        List<ShoppingCart> shoppingCartList = shoppingCartMapper.list(shoppingCart);
 
+        List<ShoppingCart> shoppingCartList = shoppingCartMapper.list(shoppingCart);
         if (shoppingCartList == null || shoppingCartList.size() == 0) {
             throw new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
         }
 
-
-        //2. 向订单表插入一条数据
+        //向订单表插入一条数据
         Orders orders = new Orders();
         BeanUtils.copyProperties(ordersSubmitDTO, orders);
 
@@ -98,28 +96,26 @@ public class OrderServiceImpl implements OrderService {
                     addressBook.getDistrictName() +
                     addressBook.getDetail() + "";
         orders.setAddress(orderAddress);
-        //订单号 --使用时间戳作为订单号，要把Long型转为String
+        //使用时间戳作为订单号，要把Long型转为String
         orders.setNumber(String.valueOf(System.currentTimeMillis()));
-        //用户名userName
 
         //后面订单明细需要使用到这个订单实体类，所以插入以后需要返回主键值
-        orderMapper.insert(orders);
+        orderMapper.insert(orders);//
 
-        //3. 向订单明细表插入n条数据
+        //向订单明细表插入数据
         List<OrderDetail> orderDetailList = new ArrayList<>();
         for (ShoppingCart cart : shoppingCartList) {
             OrderDetail orderDetail = new OrderDetail();
             BeanUtils.copyProperties(cart, orderDetail);
-            orderDetail.setOrderId(orders.getId());//设置当前订单明细关联的订单id
+            orderDetail.setOrderId(orders.getId());
             orderDetailList.add(orderDetail);
         }
 
         orderDetailMapper.insertBatch(orderDetailList);
 
-        //4. 清空当前用户的购物车数据
+        //清空当前用户的购物车数据
         shoppingCartMapper.deleteByUserId(userId);
 
-        //5. 封装VO返回对象
         OrderSubmitVO orderSubmitVO = OrderSubmitVO.builder()
                 .id(orders.getId())
                 .orderNumber(orders.getNumber())
@@ -137,46 +133,28 @@ public class OrderServiceImpl implements OrderService {
      * @return
      */
     public OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO) throws Exception {
-        // 当前登录用户id
-        Long userId = BaseContext.getCurrentId();
-        User user = userMapper.getById(userId);
 
-        //调用微信支付接口，生成预支付交易单
-//        JSONObject jsonObject = weChatPayUtil.pay(
-//                ordersPaymentDTO.getOrderNumber(), //商户订单号
-//                new BigDecimal(0.01), //支付金额，单位 元
-//                "苍穹外卖订单", //商品描述
-//                user.getOpenid() //微信用户的openid
-//        );
-//
-//        if (jsonObject.getString("code") != null && jsonObject.getString("code").equals("ORDERPAID")) {
-//            throw new OrderBusinessException("该订单已支付");
-//        }
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("code","ORDERPAID");
 
         OrderPaymentVO vo = jsonObject.toJavaObject(OrderPaymentVO.class);
         vo.setPackageStr(jsonObject.getString("package"));
 
-        //得到订单号，订单号唯一，根据订单号修改数据库
+        //根据订单号修改数据库
         String orderNumber = ordersPaymentDTO.getOrderNumber();
-
-        Integer orderPaidStatus = Orders.PAID; //支付状态，已支付
-        Integer orderStatus = Orders.TO_BE_CONFIRMED; //订单状态，待接单
-        LocalDateTime checkOutTime = LocalDateTime.now(); //给支付时间check_out_time属性赋值
-
+        Integer orderPaidStatus = Orders.PAID;
+        Integer orderStatus = Orders.TO_BE_CONFIRMED;
+        LocalDateTime checkOutTime = LocalDateTime.now();
         orderMapper.updateStatus(orderStatus, orderPaidStatus, checkOutTime, orderNumber);
 
         Orders orders = orderMapper.getByOrderNumber(orderNumber);
 
-        //用户支付成功后，通过websocket向客户端浏览器推送消息 type orderId content
+        //用户支付成功后，通过websocket向客户端浏览器推送消息
         /*
-        实现思路：
         1. 通过websocket实现管理端页面和服务器保持长连接状态
-        2. 客户支付以后，调用wensocket相关api实现服务端向客户端推送消息
+        2. 客户支付以后，调用websocket相关api实现服务端向客户端推送消息
         3. 客户端浏览器解析服务端推送的消息，判断是来单提醒还是客户催单，进行相应的消息提示和语音播报
          */
-        //type 1 来单提醒 2 客户催单
         Map map = new HashMap();
         map.put("type", 1);
         map.put("orderId", orders.getId());
@@ -195,10 +173,8 @@ public class OrderServiceImpl implements OrderService {
      */
     public void paySuccess(String outTradeNo) {
 
-        // 根据订单号查询订单
         Orders ordersDB = orderMapper.getByNumber(outTradeNo);
 
-        // 根据订单id更新订单的状态、支付方式、支付状态、结账时间
         Orders orders = Orders.builder()
                 .id(ordersDB.getId())
                 .status(Orders.TO_BE_CONFIRMED)
@@ -207,18 +183,6 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderMapper.update(orders);
-
-
-        //该方法写在这里没有用，写在上面的payment，管理端浏览器才有语音和弹窗播报
-        //找到原因了：这段代码所在方法paySuccess只被weChatPayUtil调用了，跳过微信支付时并没用到weChatPayUtil，所以这个方法没有被调用
-        Map map = new HashMap();
-        map.put("type", 1);
-        map.put("orderId", ordersDB.getId());
-        map.put("content", "订单号：" + outTradeNo);
-
-        String json = JSON.toJSONString(map);
-        webSocketServer.sendToAllClient(json);
-
     }
 
     /**
@@ -230,21 +194,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public PageResult pageQueryForUser(OrdersPageQueryDTO ordersPageQueryDTO) {
 
-        //设置分页
         PageHelper.startPage(ordersPageQueryDTO.getPage(), ordersPageQueryDTO.getPageSize());
 
-        //查订单表
         ordersPageQueryDTO.setUserId(BaseContext.getCurrentId());
         Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
 
         List<OrderVO> list = new ArrayList<>();
-
-        //遍历出每一个订单得到订单id，查订单明细表，封装到VO返回
         if(page != null && page.getTotal() > 0) {
-
             for (Orders orders : page) {
                 Long orderId = orders.getId();
-
                 List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orderId);
 
                 OrderVO orderVO = new OrderVO();
@@ -254,25 +212,21 @@ public class OrderServiceImpl implements OrderService {
                 list.add(orderVO);
             }
         }
-
-
         return new PageResult(page.getTotal(), list);
     }
 
     /**
-     * 查询订单详情
+     * 用户查询订单详情
      * @param id
      * @return
      */
     @Override
     public OrderVO orderDetailQuery(Long id) {
-        //根据id查询订单
-        Orders orders = orderMapper.getByOrderId(id);
 
+        Orders orders = orderMapper.getByOrderId(id);
 
         List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
 
-        //将该订单及其详情封装到orderVO并返回
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(orders,orderVO);
 
@@ -289,11 +243,10 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional
-    public void orderCancel(Long id) throws Exception {
+    public void orderCancel(Long id) {
 
         Orders orders = orderMapper.getByOrderId(id);
 
-        //校验订单是否存在
         if(orders == null) {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
@@ -308,12 +261,12 @@ public class OrderServiceImpl implements OrderService {
         if(orders.getStatus().equals(Orders.TO_BE_CONFIRMED)) {
             orders.setPayStatus(Orders.REFUND);
         }
-            //更新订单状态、取消原因、取消时间
+
             orders.setStatus(Orders.CANCELLED);
             orders.setCancelReason("用户取消");
             orders.setCancelTime(LocalDateTime.now());
-            orderMapper.update(orders);
 
+            orderMapper.update(orders);
     }
 
     /**
@@ -323,8 +276,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void orderAgain(Long id) {
 
-        //根据订单id查找当前订单详情
         List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+
         //将详情对象转换为购物车对象
         List<ShoppingCart> shoppingCartList = new ArrayList<>();
 
@@ -333,12 +286,10 @@ public class OrderServiceImpl implements OrderService {
             BeanUtils.copyProperties(orderDetail, shoppingCart);
 
             shoppingCart.setCreateTime(LocalDateTime.now());
-
             shoppingCart.setUserId(orderMapper.getByOrderId(id).getUserId());
 
             shoppingCartList.add(shoppingCart);
         }
-
         shoppingCartMapper.insertBatch(shoppingCartList);
     }
 
@@ -349,43 +300,26 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public PageResult orderConditionSearch(OrdersPageQueryDTO ordersPageQueryDTO) {
-        //分页
+
         PageHelper.startPage(ordersPageQueryDTO.getPage(),ordersPageQueryDTO.getPageSize());
 
-//        //拿到所有订单
-//        List<Orders> list =  orderMapper.pageQuery(ordersPageQueryDTO);
-//        if(list == null) {
-//            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
-//        }
-//        Page<OrderVO> orderVOList = new Page<>();
-//        for (Orders orders : list) {
-//            //把订单信息拷贝到OrderVO对象
-//            OrderVO orderVO = new OrderVO();
-//            BeanUtils.copyProperties(orders, orderVO);
-//            //查询并将订单明细set到OrderVO对象
-//            List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orders.getId());
-//            orderVO.setOrderDetailList(orderDetailList);
-//            orderVOList.add(orderVO);
-//        }
-//        return new PageResult(orderVOList.getTotal(), orderVOList);
-
-        //参考答案
         Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
 
-        //部分订单状态，需要额外返回订单菜品信息，将Orders转化为OrderVO
+        //部分订单状态，需要额外返回订单菜品信息
         List<OrderVO> orderVOList = getOrderVOList(page);
 
         return new PageResult(page.getTotal(), orderVOList);
     }
-    //参考答案，为条件查询写的私有方法，将Orders转化为OrderVO，以OrderVO形式返回订单菜品信息
+
     private List<OrderVO> getOrderVOList(Page<Orders> page) {
+
         List<OrderVO> orderVOList = new ArrayList<>();
 
         List<Orders> ordersList = page.getResult();
 
         if(!(CollectionUtils.isEmpty(ordersList))) {
             for (Orders orders : ordersList) {
-                //如果查询出来的order list不为空，就将共同字段复制到OrderVO
+
                 OrderVO orderVO = new OrderVO();
                 BeanUtils.copyProperties(orders, orderVO);
                 String orderDishes = getOrderDishesStr(orders);
@@ -404,23 +338,9 @@ public class OrderServiceImpl implements OrderService {
      * @return
      */
     private String getOrderDishesStr(Orders orders) {
-        //先在OrderDetail数据库查到该订单对应的菜品名字和数量
-        List<OrderDetail> list = orderDetailMapper.getByOrderId(orders.getId());
-//        String orderDishes = "";
-//        String orderDishes1 = "";
-//        if (list != null && list.size() > 0) {
-//
-//            for (OrderDetail orderDetail : list) {
-//                String name = orderDetail.getName();
-//                int number = orderDetail.getNumber();
-//                orderDishes1 = name + "*" + number + ";";
-//                orderDishes += orderDishes1;
-//            }
-//
-//        }
-//        return orderDishes;
 
-        //参考答案
+        List<OrderDetail> list = orderDetailMapper.getByOrderId(orders.getId());
+
         //将每一条订单菜品信息拼接为字符串
         List<String> orderDishesList = list.stream().map(x -> {
             String orderDish = x.getName() + "*" + x.getNumber() + ";";
@@ -438,27 +358,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public OrderStatisticsVO statusStatistics() {
-//        //查找数据库，获得全部订单
-//        List<Orders> list = orderMapper.get();
-//        //查找数据库，获得全部订单的状态
-//        List<Integer> statusList = orderMapper.getStatus();
-//        Integer toBeConfirmedNumber = 0;
-//        Integer confirmedNumber = 0;
-//        Integer deliveryInProgressNumber = 0;
-//        //遍历订单状态的集合，统计各个状态的订单数量并返回
-//        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
-//        for (Integer i : statusList) {
-//            if (i == Orders.TO_BE_CONFIRMED) {
-//                toBeConfirmedNumber++;
-//            }
-//            if (i == Orders.CONFIRMED) {
-//                confirmedNumber++;
-//            }
-//            if (i == Orders.DELIVERY_IN_PROGRESS) {
-//                deliveryInProgressNumber++;
-//            }
-//        }
-        //参考答案
+
         //根据状态，分别查询出待接单、待派送、派送中的订单数量
         Integer toBeConfirmedNumber = orderMapper.countStatus(Orders.TO_BE_CONFIRMED);
         Integer confirmedNumber = orderMapper.countStatus(Orders.CONFIRMED);
@@ -479,6 +379,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public OrderVO details(Long id) {
+
         Orders orders = orderMapper.getByOrderId(id);
         List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
 
@@ -494,20 +395,11 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void orderConfirm(OrdersConfirmDTO ordersConfirmDTO) {
-        //从数据库查到该笔订单，将订单状态改为已接单
-        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
-//        Orders orders = orderMapper.getByOrderId(ordersConfirmDTO.getId());
-//
-//        if (ordersConfirmDTO.getStatus() != Orders.TO_BE_CONFIRMED) {
-//            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
-//        }
-//
-//        orders.setStatus(Orders.CONFIRMED);
+
         Orders orders = Orders.builder()
-                .id(ordersConfirmDTO.getId())
+                        .id(ordersConfirmDTO.getId())
                         .status(Orders.CONFIRMED)
-                                .build();
-        //更新数据库订单状态
+                        .build();
         orderMapper.update(orders);
     }
 
@@ -517,8 +409,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void orderRejection(OrdersRejectionDTO ordersRejectionDTO) {
-        //从数据库查到该笔订单，将订单状态改为已取消
-        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+
         Orders orders = orderMapper.getByOrderId(ordersRejectionDTO.getId());
 
         //订单必须存在且状态为待接单，才可以拒单
@@ -530,9 +421,9 @@ public class OrderServiceImpl implements OrderService {
         orders.setStatus(Orders.CANCELLED);
         orders.setPayStatus(Orders.REFUND);
 
-        //更新拒单原因
+        //拒单原因
         orders.setRejectionReason(ordersRejectionDTO.getRejectionReason());
-        //更新取消时间
+        //取消时间
         orders.setCancelTime(LocalDateTime.now());
 
         //更新数据库订单状态
@@ -545,23 +436,22 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void cancel(OrdersCancelDTO ordersCancelDTO) {
-        //从数据库查到该笔订单，将订单状态改为已取消
-        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+
+        //创建订单退款的基础信息
+        Orders order2Cancel = Orders.builder()
+                .id(ordersCancelDTO.getId())
+                .status(Orders.CANCELLED)
+                .rejectionReason(ordersCancelDTO.getCancelReason())
+                .cancelTime(LocalDateTime.now())
+                .build();
+        //如已经付款 改为退款状态
         Orders ordersDB = orderMapper.getByOrderId(ordersCancelDTO.getId());
-
-        Orders orders = new Orders();
         if (ordersDB.getPayStatus().equals(Orders.PAID)) {
-            orders.setPayStatus(Orders.REFUND);
+            order2Cancel.setPayStatus(Orders.REFUND);
         }
-        orders.setId(ordersCancelDTO.getId());
-        orders.setStatus(Orders.CANCELLED);
-
-        //更新订单取消原因
-        orders.setRejectionReason(ordersCancelDTO.getCancelReason());
-        orders.setCancelTime(LocalDateTime.now());
 
         //更新数据库订单状态
-        orderMapper.update(orders);
+        orderMapper.update(order2Cancel);
     }
 
     /**
@@ -570,7 +460,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void orderDelivery(Long id) {
-        //从数据库查到该订单
+
         Orders ordersDB = orderMapper.getByOrderId(id);
 
         //只有状态为待派送的订单可以执行派送订单操作
@@ -582,8 +472,6 @@ public class OrderServiceImpl implements OrderService {
                 .id(id)
                 .status(Orders.DELIVERY_IN_PROGRESS)
                 .build();
-        //设置订单状态
-
 
         //更新数据库订单状态
         orderMapper.update(orders);
@@ -595,10 +483,9 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void complete(Long id) {
-        //从数据库查到该订单
+
         Orders ordersDB = orderMapper.getByOrderId(id);
 
-        //只有状态为待派送的订单可以执行派送订单操作
         if (ordersDB == null || !(ordersDB.getStatus().equals(Orders.DELIVERY_IN_PROGRESS))) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
@@ -610,7 +497,6 @@ public class OrderServiceImpl implements OrderService {
                 .deliveryTime(LocalDateTime.now())
                 .build();
 
-
         //更新数据库订单状态
         orderMapper.update(orders);
     }
@@ -621,7 +507,9 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void remind(Long id) {
+
         String orderNumber = orderMapper.getByOrderId(id).getNumber();
+
         Map map = new HashMap();
         map.put("type", 2);
         map.put("orderId", id);

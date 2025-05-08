@@ -32,7 +32,7 @@ public interface UserMapper {
     User getById(Long userId);
 
     /**
-     * 动态查询用户数量
+     * 查询某时间段的新增用户
      * @param map
      * @return
      */

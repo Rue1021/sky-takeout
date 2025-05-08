@@ -35,13 +35,13 @@ public class ShoppingCartController {
     }
 
     /**
-     * 查看购物车
+     * 用户查看购物车
      * @return
      */
     @GetMapping("/list")
-    @ApiOperation("查看购物车")
+    @ApiOperation("用户查看购物车")
     public Result<List<ShoppingCart>> list() {
-        log.info("查看购物车..");
+        log.info("用户查看购物车..");
         List<ShoppingCart> list = shoppingCartService.showShoppingCart();
         return Result.success(list);
     }

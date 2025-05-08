@@ -24,7 +24,6 @@ public interface EmployeeMapper {
      * 插入员工数据
      * @param employee
      */
-    //字段用的下划线命名，属性用的驼峰命名，我们的yml文件已经设置了驼峰命名，所以可以传输过去
     @Insert("insert into employee (name, username, password, phone, sex, id_number, create_time, update_time,create_user, update_user, status)" +
             "values" + " (#{name}, #{username}, #{password}, #{phone}, #{sex}, #{idNumber}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser}, #{status}) ")
     @AutoFill(value = OperationType.INSERT)

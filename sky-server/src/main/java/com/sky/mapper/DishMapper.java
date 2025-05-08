@@ -24,7 +24,6 @@ public interface DishMapper {
     @Select("select count(id) from dish where category_id = #{categoryId}")
     Integer countByCategoryId(Long categoryId);
 
-
     /**
      * 插入菜品数据
      * @param dish
@@ -42,12 +41,12 @@ public interface DishMapper {
     @Select("select * from dish where id = #{id}") //根据主键查询菜品的sql语句
     Dish getById(Long id);
 
-    /**
-     * 根据主键删除菜品
-     * @param id
-     */
-    @Delete("delete from dish where id = #{id}")
-    void deleteById(Long id);
+//    /**
+//     * 根据主键删除菜品
+//     * @param id
+//     */
+//    @Delete("delete from dish where id = #{id}")
+//    void deleteById(Long id);
 
     /**
      * 根据id动态修改菜品信息
@@ -77,7 +76,8 @@ public interface DishMapper {
      * @param id
      * @return
      */
-    @Select("select * from dish d left join setmeal_dish s on d.id = s.dish_id where s.setmeal_id = #{setmealId}")
+    @Select("select * from dish d left join setmeal_dish s on d.id = s.dish_id " +
+            "where s.setmeal_id = #{setmealId}")
     List<Dish> getBySetmealId(Long id);
 
     /**
